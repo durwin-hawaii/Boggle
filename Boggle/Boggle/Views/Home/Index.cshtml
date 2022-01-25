@@ -1,0 +1,201 @@
+﻿@model Boggle.Models.Word
+
+@{
+    ViewData["Title"] = "Boggle";
+}
+
+<script type="text/javascript">
+    function restart() {
+        
+        var c = document.getElementById("count");
+        if (c.value < 3) {
+            alert("Minimum 3 Letters required")
+            return;
+        }
+        if (c.value > 10) {
+            alert("Maximun 10 Letters required")
+            return;
+        }
+
+        var form = document.createElement("form");
+        form.setAttribute("method", "post");
+        form.setAttribute("action", "Home");
+        var FN = document.createElement("input");
+        FN.setAttribute("type", "text");
+        FN.setAttribute("name", "count");
+        FN.setAttribute("value", c.value);
+        form.appendChild(FN);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function hint() {
+        var xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
+                if (xmlhttp.status == 200) {
+                    var hint = JSON.parse(xmlhttp.responseText);
+                    guess = document.getElementById("G_cell_0");
+                    guess.innerHTML = hint.letter;
+                    cell = document.getElementById("R_cell_" + hint.index.toString());
+                    cell.bgColor = "#00FF00";
+                }
+            }
+        };
+
+        xmlhttp.open("GET", "/Home/Hint", true);
+        xmlhttp.send();
+    }
+
+    function select(cell) {
+        var cell = document.getElementById(cell.id);
+        if (cell.bgColor == "#00FF00") {
+            alert("THAT LETTER HAS BEEN USED");
+            return;
+        }
+        var xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
+                if (xmlhttp.status == 200) {
+                    var word = JSON.parse(xmlhttp.responseText);
+                    cell = document.getElementById(word.cell);
+                    cell.bgColor = "#00FF00";
+
+                    for (let i = 0; i < word.guess.length; i++) {
+                        var guess = document.getElementById("G_cell_" + i.toString());
+                        guess.innerHTML = word.guess.substring(i, i + 1);
+                    }
+                }
+            }
+        };
+
+        xmlhttp.open("GET", "/Home/Select?cell=" + cell.id, true);
+        xmlhttp.send();
+    }
+
+    function check() {
+        var xmlhttp = new XMLHttpRequest();
+
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == XMLHttpRequest.DONE) {   // XMLHttpRequest.DONE == 4
+                if (xmlhttp.status == 200) {
+                    var word = JSON.parse(xmlhttp.responseText);
+
+                    for (let i = 0; i < word.random.length; i++) {
+                        var cell = document.getElementById("R_cell_" + i.toString());
+                        cell.bgColor = "#CCCCCC";
+                        var guess = document.getElementById("G_cell_" + i.toString());
+                        guess.innerHTML = "&nbsp;"
+                    }
+
+                    try {
+                        if (word.alert.length != 0) {
+
+                            if (word.alert == "YOU GUESSED THE WORD!") {
+                                if (confirm(word.alert + "\r\nWould you like to play again?")) {
+                                    restart();
+                                }
+                                else {
+                                    alert("Thank you for playing");
+                                }
+                            }
+                            alert(word.alert);
+                            return;
+                        }
+                    }
+                    catch (err) { }
+
+                    var errors_count = document.getElementById("errors_count");
+                    errors_count.value = word.errors_count.toString();
+
+                    var errors = document.getElementById("errors");
+                    errors.value = word.errors;
+
+                    var answers_count = document.getElementById("answers_count");
+                    answers_count.value = word.answers_count.toString();
+
+                    var answers = document.getElementById("answers");
+                    answers.value = word.answers;
+
+                }
+            }
+        };
+
+        xmlhttp.open("GET", "/Home/Answers", true);
+        xmlhttp.send();
+    }
+
+</script>
+
+<div class="text-center">
+    <h1 class="display-4">Welcome to Mini Boggle</h1>
+    <p>
+        Click on individual letters to form a word. <br />
+
+        Click on "Enter" button to check the word and add it to the list <br />
+    </p>
+    <p>
+        Word Letter Count:
+        <input type="text" id="count" value="@Model.count" />
+        <button id="NewWord" onclick="restart()">New Word</button>
+    </p>
+
+    <button id="new" value="New Word" />
+
+    <table border="1" width="1000">
+        @{
+            var i = 0;
+            {
+                <tr>
+                    @for (i = 0; i < Model.random.Length; i++)
+                    {
+                        {
+                            <td id="R_cell_@i" width="@Model.width%" onclick="select(this)">@Model.random.Substring(i, 1)</td>
+                        }
+                    }
+                </tr>
+            }
+        }
+    </table>
+    <br />
+    <table border="1" width="1000">
+        @{
+            {
+                <tr>
+                    @for (i = 0; i < Model.random.Length; i++)
+                    {
+                        {
+                            <td id="G_cell_@i" width="@Model.width%">&nbsp;</td>
+                        }
+                    }
+                </tr>
+            }
+        }
+    </table>
+</div>
+<hr />
+<div>
+    <button id="Check" onclick="check()">Enter</button>
+    <button id="Hint" onclick="hint()">Hint</button>
+
+
+</div>
+<hr />
+<div>
+    <label for="answers_count">Correct:</label><br>
+    <input type="text" id="answers_count" value="0" />
+    <textarea id="answers">
+    </textarea>
+</div>
+<br />
+<hr />
+<br />
+<div>
+    <label for="errors_count">Errors:</label><br>
+    <input type="text" id="errors_count" value="0" />
+    <textarea id="errors">
+    </textarea>
+</div>
+
